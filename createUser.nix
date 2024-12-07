@@ -5,6 +5,7 @@
   shell ? pkgs: pkgs.bashInteractive,
   canSudo ? false,
   canTTY ? false,
+  canViewJournal ? canSudo,
   systemUser ? false,
   packages ? [],
   home,
@@ -14,10 +15,16 @@
   extraHomeConfig ? {},
   homeStateVersion
 }: {
+   lib,
+   ...
+}: {
   config = {
     users.users.${name} = {
       isNormalUser = !systemUser;
-      extraGroups = groups ++ (if canSudo then ["wheel"] else []) ++ (if canTTY then ["tty"] else []);
+      extraGroups = groups
+      ++ lib.optional canSudo "wheel"
+      ++ lib.optional canTTY "tty"
+      ++ lib.optional canViewJournal "systemd-journal";
 
       inherit home;
       inherit description;
