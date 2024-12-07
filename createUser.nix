@@ -7,6 +7,7 @@
   canTTY ? false,
   canViewJournal ? canSudo,
   systemUser ? false,
+  linger ? false,
   packages ? [],
   home,
   groups ? [],
@@ -32,6 +33,7 @@
       inherit hashedPassword;
       inherit shell;
       inherit uid;
+      inherit linger;
     } // extraConfig;
 
     home-manager.users.${name} = {
