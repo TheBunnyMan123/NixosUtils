@@ -1,7 +1,7 @@
 {
    description = "Flake for NixOS";
 
-   inputs = rec {
+   inputs = {
       nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
       home-manager.url = "github:nix-community/home-manager";
       home-manager.inputs.nixpkgs.follows = "nixpkgs";
@@ -9,7 +9,7 @@
    };
 
    outputs = { nixpkgs, flake-utils, ... }: (flake-utils.lib.eachDefaultSystem (system: let
-      lib = nixpkgs."${system}".legacyPackages.lib;
+      lib = nixpkgs.lib;
    in {
       nixosModules = {
          buildFirefoxAddon = lib.makeOverridable (
