@@ -149,7 +149,6 @@
             }).config;
             hm = inputs.home-manager;
          in {
-            config,
             pkgs,
             ...
          }: {
@@ -160,12 +159,18 @@
                   inherit (cfg) home description packages hashedPassword shell uid linger;
                } // cfg.extraConfig;
 
-               environment.interactiveShellInit = ''
-                  if [[ "${builtins.toString cfg.uid}" -eq "$(${pkgs.coreutils}/bin/id -u)" ]]
-                  then
-                     source "${cfg.shellInitFile}"
-                  fi
-               '';
+               environment = {
+                  extraInit = ''
+                     if [[ "${builtins.toString cfg.uid}" -eq "$(${pkgs.coreutils}/bin/id -u)" ]]
+                     then
+                        source "${cfg.shellInitFile}"
+                     fi
+                  '';
+
+                  variables = {
+                     ENV = "/etc/profile";
+                  };
+               };
 
                home-manager.users."${cfg.name}" = {
                   imports = [ cfg.extraHomeConfig ];
