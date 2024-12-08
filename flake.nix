@@ -8,24 +8,24 @@
       flake-utils.url = "github:numtide/flake-utils";
    };
 
-   outputs = { nixpkgs, flake-utils, ... }: (flake-utils.lib.eachDefaultSystem (system: let
+   outputs = { nixpkgs, flake-utils, ... } @inputs: (flake-utils.lib.eachDefaultSystem (system: let
       lib = nixpkgs.lib;
       pkgs = nixpkgs.legacyPackages."${system}";
       
       user = rec {
          options = {
             name = lib.mkOption {
-               type = lib.types.string;
+               type = lib.types.str;
                description = "The user's name";
                example = "root";
             };
             description = lib.mkOption {
-               type = lib.types.string;
+               type = lib.types.str;
                description = "The user's description";
                example = "System Administrator";
             };
             hashedPassword = lib.mkOption {
-               type = lib.types.string;
+               type = lib.types.str;
                description = "The user's password hash";
                example = "$y$j9T$VEJtLu77FdTIbtMenY.M90$SaIAHQtSuTnRJY7OqBzFkM7fPKMOyfctVeNADa8uHO4";
             };
@@ -65,19 +65,19 @@
                default = false;
             };
             packages = lib.mkOption {
-               type = lib.types.attrsOf lib.types.package;
+               type = lib.types.listOf lib.types.package;
                description = "The user's packages";
                example = [ pkgs.neovim ];
                default = [ ];
             };
             home = lib.mkOption {
-               type = lib.types.string;
+               type = lib.types.str;
                description = "The user's home directory";
                example = "/home/bunny";
                default = "/home/${options.name}";
             };
             groups = lib.mkOption {
-               type = lib.types.attrsOf lib.types.string;
+               type = lib.types.listOf lib.types.str;
                description = "The user's groups";
                example = [ "docker" ];
                default = [ ];
@@ -88,27 +88,27 @@
                example = 1000;
             };
             extraConfig = lib.mkOption {
-               type = lib.types.submodule;
+               type = lib.types.attrs;
                description = "Extra user config (users.users.<name>)";
                example = {};
                default = {};
             };
             extraHomeConfig = lib.mkOption {
-               type = lib.types.submodule;
+               type = lib.types.attrs;
                description = "Home-manager config";
                example = {};
                default = {};
             };
-            homeStateVersion = {
-               type = lib.types.string;
+            homeStateVersion = lib.mkOption {
+               type = lib.types.str;
                description = "The system's state version";
                example = "23.05";
             };
-            shellInitFile = {
+            shellInitFile = lib.mkOption {
                type = lib.types.pathInStore;
                description = "The user's global shell init";
                example = "";
-               default = pkgs.writeTextFile "exmpty-shell-init.sh" "";
+               default = pkgs.writeShellScript "empty-shell-init.sh" "";
             };
          };
       };
@@ -144,20 +144,24 @@
             }
          );
          createUser = userConfig: (let
-            cfg = (pkgs.evalModules [userConfig user]);
+            cfg = (lib.evalModules {
+               modules = [userConfig user];
+            }).config;
+            hm = inputs.home-manager;
          in {
             config,
             pkgs,
             ...
          }: {
+            imports = [ hm.nixosModules.home-manager ];
             config = {
                users.users."${cfg.name}" = {
                   isNormalUser = !cfg.systemUser;
                   inherit (cfg) home description packages hashedPassword shell uid linger;
                } // cfg.extraConfig;
 
-               environment.shellInit = ''
-                  if [[ "${cfg.uid}" -eq "$(${pkgs.coreutils}/bin/id -u)" ]]
+               environment.interactiveShellInit = ''
+                  if [[ "${builtins.toString cfg.uid}" -eq "$(${pkgs.coreutils}/bin/id -u)" ]]
                   then
                      source "${cfg.shellInitFile}"
                   fi
@@ -166,6 +170,10 @@
                home-manager.users."${cfg.name}" = {
                   imports = [ cfg.extraHomeConfig ];
                   home.stateVersion = cfg.homeStateVersion;
+
+                  home.file.".profile" = {
+                     source = cfg.shellInitFile;
+                  };
                };
             };
          });
