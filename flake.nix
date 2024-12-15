@@ -157,6 +157,12 @@
             config = {
                users.users."${cfg.name}" = {
                   isNormalUser = !cfg.systemUser;
+
+                  extraGroups = cfg.groups ++
+                  lib.optional cfg.canSudo "wheel" ++
+                  lib.optional cfg.canTTY "tty" ++
+                  lib.optional cfg.canViewJournal "systemd-journal";
+
                   inherit (cfg) home description packages hashedPassword shell uid linger;
                } // cfg.extraConfig;
 
